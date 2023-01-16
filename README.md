@@ -47,8 +47,9 @@ At least the path to the passed fast5 files as well as the output folder must be
 
 ## Optional parameters
 
+```
 --fastq_path  Path containign the passed fastq files (if not found in the default location mentioned above)
 --tsv_path  If barcode detection was already done and tsv files were already generated, this can be used to specify path where tsv files can be found for further concatenation and processing
-
+```
 
 
