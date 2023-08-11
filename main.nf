@@ -1,5 +1,5 @@
 #!/usr/bin/env nextflow
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 
 def helpMessage() {
     // Log colors ANSI codes
@@ -44,16 +44,16 @@ if (!params.fastq_path) {
 }
 
 // Utils modules
-include ExportParams as Workflow_ExportParams from params.nextflowmodules_path+'/Utils/workflow.nf'
+include { ExportParams as Workflow_ExportParams } from params.nextflowmodules_path+'/Utils/workflow.nf'
 
-include extractAllFast5FromDir from params.nextflowmodules_path+'/Utils/fast5.nf' params(params)  
-include extractAllNanoporeFastqFromDir from params.nextflowmodules_path+'/Utils/fastq.nf' params(params)  
+include { extractAllFast5FromDir } from params.nextflowmodules_path+'/Utils/fast5.nf' params(params)  
+include { extractAllNanoporeFastqFromDir } from params.nextflowmodules_path+'/Utils/fastq.nf' params(params)  
 
 // Deeplexicon modules
-include dmux as DeeplexiconDmux from params.nextflowmodules_path+'/Deeplexicon/1.2.0/dmux.nf' //params(gatk_path: "$params.gatk_path", genome:"$params.genome", optional: "--intervals $params.dxtracks_path/$params.fingerprint_target --output_mode EMIT_ALL_SITES")
-include split as DeeplexiconSplit from params.nextflowmodules_path+'/Deeplexicon/1.2.0/split.nf' // params(genome:"$params.genome", optional: '-c 100 -M')
-include deeplexicon_concatTsv as DeeplexiconConcatTsv from params.nextflowmodules_path+'/Deeplexicon/1.2.0/tsv.nf'
-include deeplexicon_concatFastq from params.nextflowmodules_path+'/Deeplexicon/1.2.0/fastq.nf'
+include { dmux as DeeplexiconDmux } from params.nextflowmodules_path+'/Deeplexicon/1.2.0/dmux.nf' //params(gatk_path: "$params.gatk_path", genome:"$params.genome", optional: "--intervals $params.dxtracks_path/$params.fingerprint_target --output_mode EMIT_ALL_SITES")
+include { split as DeeplexiconSplit } from params.nextflowmodules_path+'/Deeplexicon/1.2.0/split.nf' // params(genome:"$params.genome", optional: '-c 100 -M')
+include { deeplexicon_concatTsv as DeeplexiconConcatTsv } from params.nextflowmodules_path+'/Deeplexicon/1.2.0/tsv.nf'
+include { deeplexicon_concatFastq } from params.nextflowmodules_path+'/Deeplexicon/1.2.0/fastq.nf'
 
 workflow {
 
@@ -79,8 +79,8 @@ workflow {
     } else {
         println "Skipping fast5 demux, change to use TSV path: ${params.tsv_path}"
 
-        include extractAllTsvFromDir from params.nextflowmodules_path+'/Utils/tsv.nf'
-        include deeplexicon_copyTsv from params.nextflowmodules_path+'/Deeplexicon/1.2.0/tsv.nf'
+        include { extractAllTsvFromDir } from params.nextflowmodules_path+'/Utils/tsv.nf'
+        include { deeplexicon_copyTsv } from params.nextflowmodules_path+'/Deeplexicon/1.2.0/tsv.nf'
 
         def tsv_files = extractAllTsvFromDir(params.tsv_path+"/*/").map { [it[0],it[1],it[2]]}
         deeplexicon_copyTsv(tsv_files)
@@ -95,7 +95,7 @@ workflow {
     def fastq_by_id = fastq_files.groupTuple(by:[0]).map{id,chunk,fastq -> [id, chunk, fastq]}
     deeplexicon_concatFastq(fastq_by_id)
 
-    tsv_fastq_by_id = DeeplexiconConcatTsv.out.join(concatFastq.out, by:[0]).view()
+    tsv_fastq_by_id = DeeplexiconConcatTsv.out.join(deeplexicon_concatFastq.out, by:[0]).view()
     //split concatenated fastq into the seperate fastqs based on found barcodes
     DeeplexiconSplit(tsv_fastq_by_id)
 
